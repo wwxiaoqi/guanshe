@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 层次：白卡 + 1px 描边 + 一层很浅的暖影（ui/Surface 负责影子与轮廓） -->
+    <style name="AppTheme.Base" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:windowAnimationStyle">@style/AppAnim</item>
+    </style>
+
+    <style name="AppTheme" parent="AppTheme.Base" />
+
+    <!-- 页面转场：打开时新页淡入上升、旧页保持；返回时反过来 -->
+    <style name="AppAnim" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/act_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/act_stay</item>
+        <item name="android:activityCloseEnterAnimation">@anim/act_back_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/act_back_exit</item>
+    </style>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 新页面进场：淡入 + 从下方 3% 升起。 -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/decelerate_quint">
+    <alpha
+        android:duration="240"
+        android:fromAlpha="0"
+        android:toAlpha="1" />
+    <translate
+        android:duration="280"
+        android:fromYDelta="3%"
+        android:toYDelta="0" />
+</set>

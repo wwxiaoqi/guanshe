@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 自适应图标前景：48×48 的 4 段等高色带（墨 / 橘 / 青绿 / 蓝）。
+     48/108 = 0.444 占宽；四角离中心 33.9 ≈ 安全半径 33，圆形/方圆形裁切都不会切到图形。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#17171A" android:pathData="M30,30h12v48h-12z" />
+    <path android:fillColor="#F76E11" android:pathData="M42,30h12v48h-12z" />
+    <path android:fillColor="#32D2A8" android:pathData="M54,30h12v48h-12z" />
+    <path android:fillColor="#459DFF" android:pathData="M66,30h12v48h-12z" />
+</vector>

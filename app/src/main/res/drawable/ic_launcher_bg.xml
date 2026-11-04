@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 自适应图标背景：暖纸（与 App 底色一致）。色带是前景，纸是背景，两层各管一件事。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#F6F5F2" />
+</shape>

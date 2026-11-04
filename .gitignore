@@ -1,0 +1,20 @@
+# 编译产物
+/build/
+*.apk
+
+# 签名文件 / 本地密钥，绝不入库
+/keystore/
+*.jks
+*.keystore
+
+# 本地构建脚本（作者机器上保留，不发布到仓库）
+/tools/
+
+# IDE
+.idea/
+*.iml
+.gradle/
+local.properties
+
+# 系统
+.DS_Store

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="kit_type_scale">1.0</string>
+    <dimen name="kit_radius_card">20dp</dimen>
+    <string name="kit_divider">solid</string>
+    <string name="kit_button">pill</string>
+</resources>

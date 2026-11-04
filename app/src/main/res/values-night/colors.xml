@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 观色 · 夜间：底 #0B0B0C（不用纯黑，纯黑上卡片发灰），卡比底亮，文字不用纯白。 -->
+<resources>
+    <color name="bg">#0B0B0C</color>
+    <color name="card">#17171A</color>
+    <color name="cardStroke">#2B2B30</color>
+    <color name="sep">#232327</color>
+    <color name="track">#232327</color>
+    <color name="text">#F2EFE9</color>
+    <color name="text2">#9C978E</color>
+    <color name="text3">#6E6A63</color>
+    <color name="accent">#F2EFE9</color>
+    <color name="accentFill">#2A2A2E</color>
+    <color name="ok">#63B183</color><color name="okText">#86C79E</color>
+    <color name="warn">#D9A648</color><color name="warnText">#EFC57E</color>
+    <color name="danger">#E0675C</color><color name="dangerText">#F09C93</color>
+</resources>
