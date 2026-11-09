@@ -41,6 +41,7 @@ public class SwipePager extends FrameLayout {
     private int animTo = -1;
     private float downX;
     private float downY;
+    private View hScroll;              // DOWN 时锁定的横向滚动控件（chips 行）
     private VelocityTracker velocity;
 
     public SwipePager(Context c) {
@@ -206,6 +207,8 @@ public class SwipePager extends FrameLayout {
                 downY = ev.getY();
                 dragging = false;
                 intercepting = false;
+                hScroll = (current >= 0 && current < pages.size())
+                        ? findHScrollableAny(pages.get(current), ev.getRawX(), ev.getRawY()) : null;
                 track(ev);
                 return false;
             case MotionEvent.ACTION_MOVE:
@@ -213,7 +216,7 @@ public class SwipePager extends FrameLayout {
                     float dx = ev.getX() - downX;
                     float dy = ev.getY() - downY;
                     if (Math.abs(dx) > slop && Math.abs(dx) > Math.abs(dy) * 1.3f
-                            && !childCanScroll(-dx)) {
+                            && !childCanScroll(ev, dx)) {
                         intercepting = true;
                         startDrag(dx < 0 ? 1 : -1);
                         applyDrag(ev);
@@ -239,13 +242,16 @@ public class SwipePager extends FrameLayout {
                 downX = ev.getX();
                 downY = ev.getY();
                 dragging = false;
+                if (hScroll == null && current >= 0 && current < pages.size()) {
+                    hScroll = findHScrollableAny(pages.get(current), ev.getRawX(), ev.getRawY());
+                }
                 return true;
             case MotionEvent.ACTION_MOVE:
                 if (!dragging) {
                     float dx = ev.getX() - downX;
                     float dy = ev.getY() - downY;
                     if (Math.abs(dx) > slop && Math.abs(dx) > Math.abs(dy) * 1.3f
-                            && !childCanScroll(-dx)) {
+                            && !childCanScroll(ev, dx)) {
                         startDrag(dx < 0 ? 1 : -1);
                     }
                 }
@@ -427,33 +433,64 @@ public class SwipePager extends FrameLayout {
         }
     }
 
-    private boolean childCanScroll(float dx) {
+    /**
+     * 手指下面有没有可横向滚动的控件（色系 / 场景 chips 行这类）。
+     *
+     * 这里特意用屏幕坐标 + getLocationOnScreen 判断，不再手算 left/top：
+     * 页面里套着竖向 ScrollView，一旦页面滚过，手算的命中点会被 scrollY 顶偏，
+     * chips 行就被判成空白，横滑全被父级吃掉、变成切 tab。
+     */
+    private boolean childCanScroll(MotionEvent ev, float dx) {
+        int dir = dx < 0 ? 1 : -1;      // 手指左滑 = 想看右边内容
+        // isShown() 兜住"锁定的还是上一页那个 chips"的情况（切到别的 tab 后别再拦手势）
+        if (hScroll != null && hScroll.isShown() && hScroll.canScrollHorizontally(dir)) return true;
         if (current < 0 || current >= pages.size()) return false;
-        View hit = hitTest(pages.get(current), downX, downY, 0f, 0f);
-        while (hit != null) {
-            if (hit.canScrollHorizontally(dx < 0 ? 1 : -1)) return true;
-            ViewParent p = hit.getParent();
-            if (!(p instanceof View)) break;
-            hit = (View) p;
-            if (hit == this) break;
+        View hit = findHScrollable(pages.get(current), ev.getRawX(), ev.getRawY(), dir);
+        if (hit != null) {
+            hScroll = hit;
+            return true;
         }
         return false;
     }
 
-    private View hitTest(View v, float x, float y, float ox, float oy) {
-        if (v == null || v.getVisibility() != VISIBLE) return null;
-        if (!(v instanceof ViewGroup)) return v;
-        ViewGroup g = (ViewGroup) v;
-        for (int i = g.getChildCount() - 1; i >= 0; i--) {
-            View c = g.getChildAt(i);
-            if (c.getVisibility() != VISIBLE) continue;
-            float cx = ox + c.getLeft() + c.getTranslationX();
-            float cy = oy + c.getTop() + c.getTranslationY();
-            if (x >= cx && x < cx + c.getWidth() && y >= cy && y < cy + c.getHeight()) {
-                View deeper = hitTest(c, x, y, cx, cy);
-                return deeper != null ? deeper : c;
+    /** DOWN 时用：任一方向还能滚就算可横向滚动控件。 */
+    private View findHScrollableAny(View v, float gx, float gy) {
+        if (v == null || v.getVisibility() != View.VISIBLE) return null;
+        if (v.canScrollHorizontally(1) || v.canScrollHorizontally(-1)) {
+            int[] loc = new int[2];
+            v.getLocationOnScreen(loc);
+            if (gx >= loc[0] && gx <= loc[0] + v.getWidth()
+                    && gy >= loc[1] && gy <= loc[1] + v.getHeight()) {
+                return v;
             }
         }
-        return v;
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = g.getChildCount() - 1; i >= 0; i--) {
+                View found = findHScrollableAny(g.getChildAt(i), gx, gy);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private View findHScrollable(View v, float gx, float gy, int dir) {
+        if (v == null || v.getVisibility() != View.VISIBLE) return null;
+        if (v.canScrollHorizontally(dir)) {
+            int[] loc = new int[2];
+            v.getLocationOnScreen(loc);
+            if (gx >= loc[0] && gx <= loc[0] + v.getWidth()
+                    && gy >= loc[1] && gy <= loc[1] + v.getHeight()) {
+                return v;
+            }
+        }
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = g.getChildCount() - 1; i >= 0; i--) {
+                View found = findHScrollable(g.getChildAt(i), gx, gy, dir);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 }
