@@ -23,6 +23,8 @@ import android.widget.TextView;
 import com.wwxiaoqi.guanshe.core.ColorMath;
 import com.wwxiaoqi.guanshe.core.Favorites;
 import com.wwxiaoqi.guanshe.data.DataStore;
+import com.wwxiaoqi.guanshe.data.Find;
+import com.wwxiaoqi.guanshe.data.Sources;
 import com.wwxiaoqi.guanshe.data.Store;
 import com.wwxiaoqi.guanshe.ui.BandView;
 import com.wwxiaoqi.guanshe.ui.Bars;
@@ -388,8 +390,8 @@ public class SearchActivity extends BaseActivity {
 
         LinearLayout foot = Page.wrap(this);
         foot.setPadding(Skin.dp(this, Page.PAD), Skin.dp(this, 18), Skin.dp(this, Page.PAD), 0);
-        TextView note = Skin.text(this, "输入 2 个字起搜：色号、色名、英文名，或 6 位色值", 11,
-                Skin.text3(this));
+        TextView note = Skin.text(this, "输入色号、色名、英文名或 6 位色值都能搜；一个字也可以",
+                11, Skin.text3(this));
         note.setLineSpacing(Skin.dp(this, 3), 1f);
         foot.addView(note);
         Page.addFull(results, foot);
@@ -407,8 +409,10 @@ public class SearchActivity extends BaseActivity {
             int namedCount = s.namedCount();
             if (namedCount > 0) {
                 addUnique(picks, s.namedName(random.nextInt(namedCount)));
-                addUnique(picks, s.namedName(random.nextInt(namedCount)));
             }
+            // 顺带告诉用户"来源名也能搜"：抽一个品牌标题当例子
+            Sources.Brand brand = Sources.BRANDS[random.nextInt(Sources.BRANDS.length)];
+            addUnique(picks, brand.title);
             int codeCount = s.codeCount();
             if (codeCount > 0) {
                 int added = 0, guard = 0;
@@ -477,15 +481,16 @@ public class SearchActivity extends BaseActivity {
     private void performSearch(String q) {
         currentQuery = q;
         DataStore.Search r = s.search(q, LIMIT);
+        Find find = Find.look(s, q);
         if (r.tooShort) {
             renderTooShort();
             return;
         }
-        if (r.palettes.length == 0 && r.codes.length == 0 && r.named.length == 0) {
+        if (r.palettes.length == 0 && r.codes.length == 0 && r.named.length == 0 && !find.any()) {
             renderNoResult();
             return;
         }
-        renderResults(r);
+        renderResults(r, find);
         scroller.scrollTo(0, 0);
         scheduleRecord(q);
     }
@@ -494,8 +499,8 @@ public class SearchActivity extends BaseActivity {
         results.removeAllViews();
         LinearLayout wrap = Page.wrap(this);
         wrap.setPadding(Skin.dp(this, Page.PAD), Skin.dp(this, 22), Skin.dp(this, Page.PAD), 0);
-        wrap.addView(Skin.medium(this, "再输入一个字", Skin.T_CARD, Skin.text(this)));
-        TextView note = Skin.text(this, "一个字搜出来的东西太多，多打一个字结果更准",
+        wrap.addView(Skin.medium(this, "输入色号、色名或色值", Skin.T_CARD, Skin.text(this)));
+        TextView note = Skin.text(this, "比如 RAL 1000、多乐士、米色，或者 #2D2B28",
                 Skin.T_NOTE, Skin.text2(this));
         note.setPadding(0, Skin.dp(this, 6), 0, 0);
         wrap.addView(note);
@@ -520,8 +525,24 @@ public class SearchActivity extends BaseActivity {
         Motion.riseIn(wrap);
     }
 
-    private void renderResults(DataStore.Search r) {
+    private void renderResults(DataStore.Search r, Find find) {
         results.removeAllViews();
+
+        int sources = find.brands.size() + find.namedSets.size();
+        if (sources > 0) {
+            results.addView(Page.section(this, "色卡来源 " + sources + " 个", null));
+            for (Sources.Brand b : find.brands) results.addView(sourceRow(b));
+            for (int set : find.namedSets) results.addView(namedSetRow(set));
+        }
+        if (!find.families.isEmpty()) {
+            results.addView(Page.section(this, "色系 " + find.families.size() + " 个", null));
+            for (int id : find.families) results.addView(groupRow(DataStore.KIND_FAMILY, id));
+        }
+        if (!find.scenes.isEmpty()) {
+            results.addView(Page.section(this, "场景 " + find.scenes.size() + " 个", null));
+            for (int id : find.scenes) results.addView(groupRow(DataStore.KIND_SCENE, id));
+        }
+
         if (r.palettes.length > 0) {
             results.addView(Page.section(this, "配色 " + r.palettes.length + " 组", null));
             for (int idx : r.palettes) results.addView(paletteRow(idx));
@@ -531,7 +552,8 @@ public class SearchActivity extends BaseActivity {
             for (int idx : r.codes) {
                 final int color = s.codeColor(idx);
                 final String name = s.codeName(idx);
-                results.addView(colorRow(color, name, null,
+                String zh = s.codeZh(idx);
+                results.addView(colorRow(color, name, zh.isEmpty() ? null : zh,
                         Favorites.colorKey(s.codeSet(idx), name)));
             }
         }
@@ -546,6 +568,115 @@ public class SearchActivity extends BaseActivity {
             }
         }
         Motion.staggerIn(results, 0, 10);
+    }
+
+    // ---------------------------------------------------------------- 跳转类结果行
+
+    /** 一行"去一个地方"的结果：色带 + 标题 + 说明 + chevron。 */
+    private View jumpRow(int[] colors, String title, String sub,
+                         final View.OnClickListener click) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setMinimumHeight(Skin.dp(this, 58));
+        row.setPadding(Skin.dp(this, Page.PAD), Skin.dp(this, 8),
+                Skin.dp(this, Page.PAD), Skin.dp(this, 8));
+
+        final View band = BandView.sized(this, colors, Skin.dp(this, 64), Skin.dp(this, 42),
+                9f, false);
+        Surface.card(band, 9f, Surface.CARD);
+        row.addView(band);
+
+        LinearLayout mid = new LinearLayout(this);
+        mid.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams midLp = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        midLp.leftMargin = Skin.dp(this, 14);
+        TextView name = Skin.medium(this, title, Skin.T_BODY, Skin.text(this));
+        name.setSingleLine(true);
+        name.setEllipsize(TextUtils.TruncateAt.END);
+        mid.addView(name);
+        if (sub != null && sub.length() > 0) {
+            TextView t2 = Skin.text(this, sub, 11, Skin.text3(this));
+            t2.setSingleLine(true);
+            t2.setEllipsize(TextUtils.TruncateAt.END);
+            t2.setPadding(0, Skin.dp(this, 3), 0, 0);
+            mid.addView(t2);
+        }
+        row.addView(mid, midLp);
+
+        LinearLayout.LayoutParams chevronLp = new LinearLayout.LayoutParams(
+                Skin.dp(this, 18), Skin.dp(this, 18));
+        chevronLp.leftMargin = Skin.dp(this, 6);
+        row.addView(Skin.icon(this, R.drawable.lc_chevron, Skin.text3(this), 18f), chevronLp);
+
+        row.setContentDescription(title + (sub == null ? "" : "，" + sub) + "，点击打开");
+        Tap.row(row);
+        row.setOnClickListener(click);
+        return row;
+    }
+
+    /** 色卡来源：点开该品牌的套列表。 */
+    private View sourceRow(final Sources.Brand b) {
+        List<DataStore.Meta> sets = Sources.setsOf(s, b);
+        int set = sets.isEmpty() ? -1 : sets.get(0).id;
+        int[] idx = set < 0 ? new int[0] : s.codesOf(set);
+        int[] sample = new int[4];
+        for (int i = 0; i < 4; i++) sample[i] = i < idx.length ? s.codeColor(idx[i]) : 0xFFD9D4CB;
+        int colors = Sources.colorsOf(s, b);
+        String sub = sets.size() <= 1
+                ? Page.fmt(colors) + " 色"
+                : sets.size() + " 套 · " + Page.fmt(colors) + " 色";
+        return jumpRow(sample, b.title, sub, new View.OnClickListener() {
+            public void onClick(View v) {
+                recordNow(currentQuery);
+                Intent i = new Intent(SearchActivity.this, SourceSetsActivity.class);
+                i.putExtra("group", b.key);
+                openFrom(i, v);
+            }
+        });
+    }
+
+    /** 传统色集：直接进网格。 */
+    private View namedSetRow(final int set) {
+        DataStore.Meta m = s.meta("namedset", set);
+        int[] idx = s.namedOf(set);
+        int[] sample = new int[4];
+        for (int i = 0; i < 4; i++) sample[i] = i < idx.length ? s.namedColor(idx[i]) : 0xFFD9D4CB;
+        String sub = s.namedFamilies(set).length + " 家族 · "
+                + Page.fmt(m == null ? 0 : m.count) + " 色";
+        return jumpRow(sample, m == null ? "传统色" : m.name, sub, new View.OnClickListener() {
+            public void onClick(View v) {
+                recordNow(currentQuery);
+                Intent i = new Intent(SearchActivity.this, CardSetActivity.class);
+                i.putExtra("kind", "namedset");
+                i.putExtra("id", set);
+                openFrom(i, v);
+            }
+        });
+    }
+
+    /** 色系 / 场景：带筛选回主界面的配色页。 */
+    private View groupRow(final int kind, final int id) {
+        DataStore.Meta m = s.meta(kind == DataStore.KIND_FAMILY ? "family" : "scene", id);
+        int hex = m == null ? 0xFFD9D4CB : m.hex;
+        int[] sample = {hex, hex, hex, hex};
+        String sub = Page.fmt(m == null ? 0 : m.count) + " 组配色";
+        return jumpRow(sample, m == null ? "" : m.name, sub, new View.OnClickListener() {
+            public void onClick(View v) {
+                openPalettes(kind, id);
+            }
+        });
+    }
+
+    private void openPalettes(int kind, int group) {
+        recordNow(currentQuery);
+        Intent i = new Intent(this, MainActivity.class);
+        i.putExtra(MainActivity.EXTRA_FILTER_KIND, kind);
+        i.putExtra(MainActivity.EXTRA_FILTER_GROUP, group);
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(i);
+        finish();
     }
 
     // ---------------------------------------------------------------- 结果行
@@ -604,7 +735,8 @@ public class SearchActivity extends BaseActivity {
         return row;
     }
 
-    private View colorRow(final int color, final String name, String sub, final String favKey) {
+    private View colorRow(final int color, final String name, final String sub,
+                          final String favKey) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -651,6 +783,7 @@ public class SearchActivity extends BaseActivity {
                 Intent i = new Intent(SearchActivity.this, ColorDetailActivity.class);
                 i.putExtra("color", color);
                 i.putExtra("name", name);
+                i.putExtra("zhname", sub == null ? "" : sub);
                 i.putExtra("favkey", favKey);
                 openFrom(i, v);
             }

@@ -21,6 +21,7 @@ import com.wwxiaoqi.guanshe.ui.BandView;
 import com.wwxiaoqi.guanshe.ui.Chips;
 import com.wwxiaoqi.guanshe.ui.Haptics;
 import com.wwxiaoqi.guanshe.ui.Motion;
+import com.wwxiaoqi.guanshe.ui.NoteSheet;
 import com.wwxiaoqi.guanshe.ui.Page;
 import com.wwxiaoqi.guanshe.ui.Rows;
 import com.wwxiaoqi.guanshe.ui.Snack;
@@ -41,7 +42,6 @@ import java.util.Random;
  */
 public class DiscoverPage extends BasePage {
 
-    private static final int[] SHOWN_SCENES = {0, 1, 2, 3, 4, 5, 10, 11};   // 春夏秋冬 日落 深夜 婚礼 圣诞
     private static final float BAND_H = 208f;
 
     private final Random random = new Random(System.nanoTime());
@@ -86,9 +86,10 @@ public class DiscoverPage extends BasePage {
         root.addView(buildRandomSection());
 
         // 色系
-        root.addView(Page.section(host, "色系", "16 个"));
-        String[] fams = new String[16];
-        for (int i = 0; i < 16; i++) fams[i] = s.groupName(DataStore.KIND_FAMILY, i);
+        final int familyCount = groupCount(s, DataStore.KIND_FAMILY);
+        root.addView(Page.section(host, "色系", familyCount + " 个"));
+        String[] fams = new String[familyCount];
+        for (int i = 0; i < familyCount; i++) fams[i] = s.groupName(DataStore.KIND_FAMILY, i);
         Chips.Bar famBar = Chips.bar(host, fams, -1, true, new Chips.OnPick() {
             public void onPick(int index, String name) {
                 host.filterPalettes(DataStore.KIND_FAMILY, index);
@@ -96,20 +97,15 @@ public class DiscoverPage extends BasePage {
         });
         root.addView(famBar.view);
 
-        // 场景
-        root.addView(Page.section(host, "场景", "28 个"));
-        String[] scenes = new String[SHOWN_SCENES.length + 1];
-        for (int i = 0; i < SHOWN_SCENES.length; i++) {
-            scenes[i] = s.groupName(DataStore.KIND_SCENE, SHOWN_SCENES[i]);
-        }
-        scenes[SHOWN_SCENES.length] = "全部";
+        // 场景：全部列出（以前只放 8 个，另外 20 个场景只能去配色页找）
+        final int sceneCount = groupCount(s, DataStore.KIND_SCENE);
+        root.addView(Page.section(host, "场景", sceneCount + " 个"));
+        String[] scenes = new String[sceneCount + 1];
+        for (int i = 0; i < sceneCount; i++) scenes[i] = s.groupName(DataStore.KIND_SCENE, i);
+        scenes[sceneCount] = "全部";
         Chips.Bar sceneBar = Chips.bar(host, scenes, -1, true, new Chips.OnPick() {
             public void onPick(int index, String name) {
-                if (index >= SHOWN_SCENES.length) {
-                    host.filterPalettes(DataStore.KIND_SCENE, -1);
-                } else {
-                    host.filterPalettes(DataStore.KIND_SCENE, SHOWN_SCENES[index]);
-                }
+                host.filterPalettes(DataStore.KIND_SCENE, index >= sceneCount ? -1 : index);
             }
         });
         root.addView(sceneBar.view);
@@ -124,7 +120,8 @@ public class DiscoverPage extends BasePage {
         LinearLayout foot = Page.wrap(host);
         foot.setPadding(Skin.dp(host, Page.PAD), Skin.dp(host, 26),
                 Skin.dp(host, Page.PAD), Skin.dp(host, 26));
-        TextView count = Skin.text(host, "13,665 组配色 · 20,969 个色号", 11, Skin.text3(host));
+        TextView count = Skin.text(host, "13,665 组配色 · "
+                + Page.fmt(s.codeCount() + s.namedCount()) + " 个颜色", 11, Skin.text3(host));
         count.setLetterSpacing(0.02f);
         foot.addView(count);
         TextView offline = Skin.text(host, "全部数据在本机，连网也更新不了它", 11, Skin.text3(host));
@@ -616,8 +613,35 @@ public class DiscoverPage extends BasePage {
         if (favKey == null) return;
         boolean added = host.favs().toggleFav(favKey);
         paintStar(true);
-        Haptics.success(v);
-        Snack.show(v, added ? "已收藏这组配色" : "已取消收藏");
+        if (added) {
+            Haptics.success(v);
+            Snack.show(v, "已收藏这组配色", "写备注", new Runnable() {
+                public void run() {
+                    editNote();
+                }
+            }, Snack.DURATION_LONG);
+        } else {
+            Snack.show(v, "已取消收藏");
+        }
         refreshFavorites();
+    }
+
+    private void editNote() {
+        if (favKey == null) return;
+        NoteSheet.show(host, host.favs(), favKey, "收藏备注", label, new Runnable() {
+            public void run() {
+                refreshFavorites();
+            }
+        });
+    }
+
+    /** meta 里有几个色系 / 场景：数据加一个，发现页的 chip 和标题数字自动跟着长。 */
+    private static int groupCount(DataStore s, int kind) {
+        String want = kind == DataStore.KIND_FAMILY ? "family" : "scene";
+        int n = 0;
+        for (DataStore.Meta m : s.metas()) {
+            if (want.equals(m.kind)) n++;
+        }
+        return n;
     }
 }

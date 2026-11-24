@@ -25,6 +25,7 @@ public final class FavStore {
     private static final String K_APPEAR = "appear";
     private static final String K_LOCAL = "localpal";
     private static final String K_SEARCH = "search";
+    private static final String K_NOTE = "note";       // 行格式：<收藏键>\t<备注>
 
     public static final int MAX_RECENT = 20;
     public static final int MAX_SEARCH = 8;
@@ -51,12 +52,46 @@ public final class FavStore {
         if (list.contains(key)) {
             list.remove(key);
             added = false;
+            removeNote(key);          // 取消收藏时备注一起清掉，不留孤儿
         } else {
             list.add(0, key);
             added = true;
         }
         p.edit().putString(K_FAV, join(list)).apply();
         return added;
+    }
+
+    // ---------------------------------------------------------------- 备注
+    /** 某个收藏项的备注；没有返回空串。 */
+    public String note(String key) {
+        if (key == null) return "";
+        for (String line : split(p.getString(K_NOTE, ""))) {
+            int cut = line.indexOf('\t');
+            if (cut > 0 && line.substring(0, cut).equals(key)) return line.substring(cut + 1);
+        }
+        return "";
+    }
+
+    /** 写备注；传空串等于删除。备注压成一行（换行/制表符换成空格）。 */
+    public void setNote(String key, String text) {
+        if (key == null) return;
+        String v = text == null ? "" : text.replace('\n', ' ').replace('\t', ' ').trim();
+        List<String> out = new ArrayList<String>();
+        for (String line : split(p.getString(K_NOTE, ""))) {
+            int cut = line.indexOf('\t');
+            String k = cut > 0 ? line.substring(0, cut) : line;
+            if (!k.equals(key)) out.add(line);
+        }
+        if (v.length() > 0) out.add(0, key + "\t" + v);
+        p.edit().putString(K_NOTE, join(out)).apply();
+    }
+
+    public void removeNote(String key) {
+        setNote(key, "");
+    }
+
+    public boolean hasNote(String key) {
+        return note(key).length() > 0;
     }
 
     // ---------------------------------------------------------------- 最近查看

@@ -17,7 +17,13 @@ import java.io.FileNotFoundException;
  */
 public class ShareProvider extends ContentProvider {
 
-    public static final String AUTHORITY = "com.wwxiaoqi.guanshe.share";
+    /**
+     * 分享用的 authority：清单里写的是 ${applicationId}.share，运行时用包名拼出同一个值。
+     * 这样换成别的 applicationId（比如与官方版共存的 .dulux 版）时，两个 App 不会抢同一个 provider。
+     */
+    public static String authority(android.content.Context c) {
+        return c.getPackageName() + ".share";
+    }
 
     @Override
     public boolean onCreate() {

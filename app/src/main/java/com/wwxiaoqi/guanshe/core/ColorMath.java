@@ -198,18 +198,27 @@ public final class ColorMath {
                 + RT * (dC / SC) * (dH / SH));
     }
 
-    /** 色相大类：0 红 / 1 橙 / 2 黄 / 3 绿 / 4 青 / 5 蓝 / 6 紫 / 7 无彩色。色卡网格的筛选用。 */
-    public static int hueClass(int c) {
-        float[] h = hsl(c);
-        if (h[1] < 8f || h[2] < 6f || h[2] > 96f) return 7;
-        float d = h[0];
-        if (d < 15f || d >= 345f) return 0;
-        if (d < 45f) return 1;
-        if (d < 70f) return 2;
-        if (d < 160f) return 3;
-        if (d < 195f) return 4;
-        if (d < 265f) return 5;
-        return 6;
+    /**
+     * 色调大类：0 白 / 1 米 / 2 棕 / 3 红 / 4 橙 / 5 黄 / 6 绿 / 7 青 / 8 蓝 / 9 紫 / 10 灰 / 11 黑。
+     *
+     * 比单纯按色相切更适合墙面漆：纯色相只剩 7 档，暖色再按"浅/深"拆出米与棕，近白、无彩、近黑单独成档。
+     * 每一档互斥，且覆盖所有颜色 —— 色卡网格里点任何一档都不会漏色。
+     */
+    public static int toneClass(int c) {
+        float[] hsl = hsl(c);
+        float h = hsl[0], s = hsl[1], l = hsl[2];
+        if (l < 12f) return 11;                                   // 黑
+        if (l > 93f) return 0;                                    // 白：近白不再按色相分
+        if (s < 9f) return 10;                                    // 灰：无彩
+        if (h >= 15f && h < 70f && s >= 55f) return h < 45f ? 4 : 5;   // 鲜艳的橙 / 黄
+        if (h >= 15f && h < 70f) return l >= 66f ? 1 : 2;         // 其余暖色：浅=米，深=棕
+        if (h < 15f || h >= 345f) return 3;                       // 红
+        if (h < 45f) return 4;                                    // 橙
+        if (h < 70f) return 5;                                    // 黄
+        if (h < 160f) return 6;                                   // 绿
+        if (h < 195f) return 7;                                   // 青
+        if (h < 265f) return 8;                                   // 蓝
+        return 9;                                                // 紫
     }
 
     /** 在 pool 里找离 target 最近的 limit 个，返回下标，按 ΔE 升序。 */

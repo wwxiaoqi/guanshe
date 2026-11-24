@@ -12,6 +12,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.wwxiaoqi.guanshe.data.DataStore;
+import com.wwxiaoqi.guanshe.data.Sources;
 import com.wwxiaoqi.guanshe.data.Store;
 import com.wwxiaoqi.guanshe.ui.BandView;
 import com.wwxiaoqi.guanshe.ui.Bars;
@@ -25,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 某个来源下的套列表（潘通 10 套 / 劳尔 6 套 / CBCC 1 套 / 立邦 1 套）。
+ * 某个来源下的套列表（潘通 11 套 / 劳尔 6 套 / 多乐士 9 套 / 其余各 1~4 套）。
  *
  * 相比旧版：每行前面多了一条 36dp 的迷你色带（该套前 4 个色号），
  * 不点进去也能看出这套大概是"黄调 / 蓝调 / 中性"；行 64dp、整行可点，
@@ -197,31 +198,17 @@ public class SourceSetsActivity extends BaseActivity {
 
     // ---------------------------------------------------------------- 数据
     private String titleOf(String group) {
-        if ("pantone".equals(group)) return "潘通色卡";
-        if ("ral".equals(group)) return "劳尔色卡";
-        if ("cbcc".equals(group)) return "CBCC 中国建筑";
-        if ("niban".equals(group)) return "立邦墙面漆";
-        return "色卡";
+        Sources.Brand b = Sources.byKey(group);
+        return b == null ? "色卡" : b.title;
     }
 
     private List<DataStore.Meta> setsOf(DataStore s, String group) {
+        Sources.Brand brand = Sources.byKey(group);
+        if (brand != null) return Sources.setsOf(s, brand);
+        // 未知来源（比如以后 Sources 页改了 group 名）：把全部色卡套列出来，别给用户一张空页
         List<DataStore.Meta> out = new ArrayList<DataStore.Meta>();
         for (DataStore.Meta m : s.metas()) {
-            if ("pantone".equals(group)) {
-                if ("pantset".equals(m.kind) && !m.name.startsWith("CBCC")
-                        && !m.name.startsWith("立邦")) {
-                    out.add(m);
-                }
-            } else if ("ral".equals(group)) {
-                if ("ralset".equals(m.kind)) out.add(m);
-            } else if ("cbcc".equals(group)) {
-                if ("pantset".equals(m.kind) && m.name.startsWith("CBCC")) out.add(m);
-            } else if ("niban".equals(group)) {
-                if ("pantset".equals(m.kind) && m.name.startsWith("立邦")) out.add(m);
-            } else {
-                // 未知来源（比如以后 Sources 页改了 group 名）：把全部色卡套列出来，别给用户一张空页
-                if ("pantset".equals(m.kind) || "ralset".equals(m.kind)) out.add(m);
-            }
+            if ("pantset".equals(m.kind) || "ralset".equals(m.kind)) out.add(m);
         }
         return out;
     }

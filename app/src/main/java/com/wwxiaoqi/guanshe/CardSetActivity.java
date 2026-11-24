@@ -32,10 +32,10 @@ import com.wwxiaoqi.guanshe.ui.Tap;
 import java.util.ArrayList;
 
 /**
- * 单套色卡 / 单个传统色集的浏览（specs/color-cards · 网格浏览 + 色相筛选）。
+ * 单套色卡 / 单个传统色集的浏览（specs/color-cards · 网格浏览 + 色调筛选）。
  *
  * 相比旧版：
- * - 色相筛选行只建一次，选中时改色不重建行（旧版每次选中 removeAllViews，整行会闪一下）；
+ * - 色调筛选行只建一次，选中时改色不重建行（旧版每次选中 removeAllViews，整行会闪一下）；
  * - 网格按 120 个一批渲染，滚动接近底部再补下一批，新加的行只让前 4 行短 stagger 进场；
  * - 色块按下去会缩、长按复制 HEX；右上角搜索、右下角"回到顶部"都按 48dp 触达区做；
  * - "回到顶部"是白底圆钮 + 浮起阴影，滚过约 600dp 才带位移 / 缩放 / 透明度出现。
@@ -52,14 +52,16 @@ public class CardSetActivity extends BaseActivity {
     /** 离内容底部这么近就补下一批。 */
     private static final int LOAD_BEFORE_DP = 600;
 
-    private static final String[] HUE_LABEL = {"全部", "红", "橙", "黄", "绿", "青", "蓝", "紫", "灰"};
+    private static final String[] TONE_LABEL = {"全部", "白", "米", "棕", "红", "橙", "黄",
+            "绿", "青", "蓝", "紫", "灰", "黑"};
 
     private DataStore s;
     private String kind;
     private int id;
     private boolean named;
+    private boolean legacy;
 
-    private int hueFilter = -1;          // -1 = 全部；否则 0..7（ColorMath.hueClass）
+    private int hueFilter = -1;          // -1 = 全部；否则 0..11（ColorMath.toneClass）
     private int[][] blocks;              // 分块渲染：单套色卡只有一块；传统色每家族一块
     private String[] blockNames;         // 传统色的家族名；单套色卡为 null
     private int blockIndex;
@@ -98,6 +100,7 @@ public class CardSetActivity extends BaseActivity {
         named = "namedset".equals(kind);
         if (kind == null) kind = "pantset";
         id = getIntent().getIntExtra("id", 0);
+        legacy = title().contains("旧色卡");
 
         LinearLayout root = Page.root(this, Skin.bg(this), true);
         FrameLayout frame = new FrameLayout(this);
@@ -111,7 +114,7 @@ public class CardSetActivity extends BaseActivity {
 
         if (!named) {
             // 筛选行只建一次：选中只重画网格。重建行会让"我点的东西去哪了"变得不确定。
-            hueBar = Chips.bar(this, HUE_LABEL, 0, true, new Chips.OnPick() {
+            hueBar = Chips.bar(this, TONE_LABEL, 0, true, new Chips.OnPick() {
                 public void onPick(int index, String label) {
                     hueFilter = index - 1;
                     rebuildGrid();
@@ -281,13 +284,13 @@ public class CardSetActivity extends BaseActivity {
         renderMore();
     }
 
-    /** 当前色相下的色号下标；hueFilter < 0 就是全部。 */
+    /** 当前色调下的色号下标；hueFilter < 0 就是全部。 */
     private int[] filteredCodes() {
         int[] all = s.codesOf(id);
         if (hueFilter < 0) return all;
         ArrayList<Integer> keep = new ArrayList<Integer>();
         for (int idx : all) {
-            if (ColorMath.hueClass(s.codeColor(idx)) == hueFilter) keep.add(idx);
+            if (ColorMath.toneClass(s.codeColor(idx)) == hueFilter) keep.add(idx);
         }
         int[] out = new int[keep.size()];
         for (int i = 0; i < out.length; i++) out[i] = keep.get(i);
@@ -300,9 +303,10 @@ public class CardSetActivity extends BaseActivity {
             int fams = blockNames == null ? 0 : blockNames.length;
             sub.setText(fmt(totalCount) + " 色 · " + fams + " 家族");
         } else if (hueFilter < 0) {
-            sub.setText(fmt(totalCount) + " 色 · 按编号排序");
+            sub.setText(legacy ? "旧版色卡 · 与新版编号不通用 · " + fmt(totalCount) + " 色"
+                    : fmt(totalCount) + " 色 · 按编号排序");
         } else {
-            sub.setText(HUE_LABEL[hueFilter + 1] + "色系 · " + fmt(totalCount) + " 色");
+            sub.setText(TONE_LABEL[hueFilter + 1] + "色 · " + fmt(totalCount) + " 色");
         }
     }
 
@@ -384,6 +388,7 @@ public class CardSetActivity extends BaseActivity {
     private View buildCell(final int idx) {
         final int color = named ? s.namedColor(idx) : s.codeColor(idx);
         final String name = named ? s.namedName(idx) : s.codeName(idx);
+        final String zh = named ? "" : s.codeZh(idx);
         final String favKey = named
                 ? Favorites.namedKey(s.namedSet(idx), name)
                 : Favorites.colorKey(s.codeSet(idx), name);
@@ -402,7 +407,8 @@ public class CardSetActivity extends BaseActivity {
         label.setPadding(0, Skin.dp(this, 4), 0, 0);
         cell.addView(label);
 
-        cell.setContentDescription(name + "，" + ColorMath.hex(color) + "，轻点查看详情");
+        cell.setContentDescription(name + (zh.isEmpty() ? "" : "，" + zh) + "，"
+                + ColorMath.hex(color) + "，轻点查看详情");
         Tap.feedback(cell, 6f);
         Motion.interact(cell, true);
 
@@ -419,6 +425,7 @@ public class CardSetActivity extends BaseActivity {
                 Intent i = new Intent(CardSetActivity.this, ColorDetailActivity.class);
                 i.putExtra("color", color);
                 i.putExtra("name", name);
+                i.putExtra("zhname", zh);
                 i.putExtra("favkey", favKey);
                 openFrom(i, v);
             }
@@ -435,8 +442,8 @@ public class CardSetActivity extends BaseActivity {
             card = Page.empty(this, "这个色集还没有收录颜色",
                     "数据可能没有加载完整，回到色卡页重新选一套试试。", null, null);
         } else {
-            card = Page.empty(this, "这个色相下没有色号",
-                    "换一个色相看看，或者回到全部色号。", "查看全部",
+            card = Page.empty(this, "这个色调下没有色号",
+                    "换一个色调看看，或者回到全部色号。", "查看全部",
                     new View.OnClickListener() {
                         public void onClick(View v) {
                             clearFilter();

@@ -27,7 +27,7 @@ public final class Share {
         }
         try {
             Uri uri = new Uri.Builder().scheme("content")
-                    .authority(ShareProvider.AUTHORITY)
+                    .authority(ShareProvider.authority(a))
                     .appendPath(f.getName())
                     .build();
             Intent i = new Intent(Intent.ACTION_SEND);

@@ -74,7 +74,8 @@ public class PaletteListPage extends BasePage {
         TextView title = Skin.medium(host, "配色", Skin.T_TITLE, Skin.text(host));
         title.setLetterSpacing(-0.02f);
         headLeft.addView(title);
-        subTitle = Skin.text(host, "色系 × 场景交叉筛选 · 13,665 组", Skin.T_NOTE, Skin.text2(host));
+        subTitle = Skin.text(host, "色系 × 场景交叉筛选 · "
+                + Page.fmt(s.paletteCount()) + " 组", Skin.T_NOTE, Skin.text2(host));
         subTitle.setPadding(0, Skin.dp(host, 3), 0, 0);
         headLeft.addView(subTitle);
         head.addView(headLeft);

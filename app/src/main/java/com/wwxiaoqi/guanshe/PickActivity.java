@@ -33,6 +33,7 @@ import com.wwxiaoqi.guanshe.ui.CrashScreen;
 import com.wwxiaoqi.guanshe.ui.FavStore;
 import com.wwxiaoqi.guanshe.ui.Haptics;
 import com.wwxiaoqi.guanshe.ui.Motion;
+import com.wwxiaoqi.guanshe.ui.NoteSheet;
 import com.wwxiaoqi.guanshe.ui.Page;
 import com.wwxiaoqi.guanshe.ui.Rows;
 import com.wwxiaoqi.guanshe.ui.Snack;
@@ -522,8 +523,15 @@ public class PickActivity extends BaseActivity {
                 if (added) {
                     Haptics.success(v);
                     Motion.pop(v);
+                    Snack.show(v, "已收藏这组配色", "写备注", new Runnable() {
+                        public void run() {
+                            NoteSheet.show(PickActivity.this, favs, favKey, "收藏备注",
+                                    "取色结果", null);
+                        }
+                    }, Snack.DURATION_LONG);
+                } else {
+                    Snack.show(v, "已取消收藏");
                 }
-                Snack.show(v, added ? "已收藏这组配色" : "已取消收藏");
             }
         });
         pair.addView(keep, new LinearLayout.LayoutParams(0,
