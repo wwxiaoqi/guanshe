@@ -14,6 +14,60 @@ family	12	米色	EDC987	482
 family	13	银	D4D4D4	496
 family	14	黑	111111	376
 family	15	白	FFFFFF	267
+namedset	0	中国传统色	FBA397	160
+namedset	1	日本传统色	D0104C	250
+namedset	2	日本和色	F4B3C2	464
+pantset	1	潘通C版	F5DE00	2194
+pantset	2	潘通U版	FCE528	2197
+pantset	3	潘通七色	F4E867	1732
+pantset	4	潘通TN尼龙	FCF951	21
+pantset	5	潘通TPG	EEEDD1	2620
+pantset	6	潘通粉彩霓虹	009ACE	419
+pantset	7	潘通新金属	CC8B22	54
+pantset	8	潘通高级金属	D4D5D4	300
+pantset	9	潘通金属色	8C8B89	294
+pantset	10	潘通TCX棉布	EFEEE5	2626
+pantset	11	CBCC中国建筑	EFEFD5	1026
+pantset	12	立邦墙面漆	DAB996	1988
+pantset	13	潘通TPX	EFEEE5	2105
+pantset	14	多乐士 红（RR）	A99898	199
+pantset	15	多乐士 紫红（RB）	D6A4CC	135
+pantset	16	多乐士 橙（YR）	DE8E89	366
+pantset	17	多乐士 黄（YY）	D8CBC0	603
+pantset	18	多乐士 黄绿（GY）	A1C09F	210
+pantset	19	多乐士 绿（GG）	90B9B5	163
+pantset	20	多乐士 青（BG）	99AFBC	180
+pantset	21	多乐士 蓝（BB）	9E9F9E	204
+pantset	22	多乐士 中性（NN）	CCCCCB	5
+pantset	23	NCS 颜色系统	A9A062	1952
+pantset	24	CNCSCOLOR 色彩体系	73908D	1000
+pantset	25	DIC 1.2.3	0092B8	652
+pantset	26	DIC 4.5.6	FF5E44	637
+pantset	27	TOYO INK	0097CF	1079
+pantset	28	HKS E	E50068	86
+pantset	29	HKS K	E50068	86
+pantset	30	HKS N	E50068	86
+pantset	31	HKS Z	E50068	86
+pantset	32	三棵树 城市色卡	A7A3A1	618
+pantset	33	三棵树 千色卡	AEB1B0	2000
+pantset	34	嘉宝莉 色卡	CDBBBD	1883
+pantset	35	都芳 1500	FBBC9E	1500
+pantset	36	芬琳 色卡	BAB1A6	3158
+pantset	37	潘通CMYK铜版	8D9E28	2868
+pantset	38	潘通CMYK胶版	9F889D	2868
+pantset	39	潘通色彩桥梁铜版	A18838	1845
+pantset	40	潘通色彩桥梁胶版	98908B	1845
+pantset	41	DIC 中国传统色	6A96B5	320
+pantset	42	DIC 日本传统色	B97551	300
+pantset	43	DIC 法国传统色	008E4A	321
+pantset	44	国标漆膜	7E8175	83
+pantset	45	Munsell 孟塞尔	2F8873	1594
+ralset	101	劳尔塑料	C9BB88	300
+ralset	102	劳尔实效金属	A0A2A4	70
+ralset	103	劳尔实效	E6E7E6	420
+ralset	104	劳尔设计体系1	2B2B2B	1335
+ralset	105	劳尔设计体系2	212122	289
+ralset	106	劳尔经典	C9BB88	213
 scene	0	春	97DBAE	161
 scene	1	夏	97DBAE	253
 scene	2	秋	DAB88B	140
@@ -42,25 +96,5 @@ scene	24	深色	180A0A	142
 scene	25	皮肤	DAB88B	186
 scene	26	彩虹	9ADCFF	111
 scene	27	神	DAB88B	139
-pantset	1	潘通C版	F5DE00	2194
-pantset	2	潘通U版	FCE528	2197
-pantset	3	潘通七色	F4E867	1732
-pantset	4	潘通TN尼龙	FCF951	21
-pantset	5	潘通TPG	EEEDD1	2620
-pantset	6	潘通粉彩霓虹	009ACE	419
-pantset	7	潘通新金属	CC8B22	54
-pantset	8	潘通高级金属	D4D5D4	300
-pantset	9	潘通金属色	8C8B89	294
-pantset	10	潘通TCX棉布	EFEEE5	2626
-pantset	11	CBCC中国建筑	EFEFD5	1026
-pantset	12	立邦墙面漆	FBFBF6	1880
-pantset	13	潘通TPX	EFEEE5	2105
-ralset	101	劳尔塑料	C9BB88	300
-ralset	102	劳尔实效金属	A0A2A4	70
-ralset	103	劳尔实效	E6E7E6	420
-ralset	104	劳尔设计体系1	2B2B2B	1335
-ralset	105	劳尔设计体系2	212122	289
-ralset	106	劳尔经典	C9BB88	213
-namedset	0	中国传统色	FBA397	160
-namedset	1	日本传统色	D0104C	250
-namedset	2	日本和色	F4B3C2	464
+pantset	46	多乐士 旧色卡	DCA896	326
+pantset	47	立邦 旧色卡	FAD490	482
