@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.wwxiaoqi.guanshe"
-    android:versionCode="16"
-    android:versionName="1.1.1">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="35" />
 
@@ -57,7 +54,7 @@
 
         <provider
             android:name=".ui.ShareProvider"
-            android:authorities="com.wwxiaoqi.guanshe.share"
+            android:authorities="${applicationId}.share"
             android:exported="false"
             android:grantUriPermissions="true" />
     </application>

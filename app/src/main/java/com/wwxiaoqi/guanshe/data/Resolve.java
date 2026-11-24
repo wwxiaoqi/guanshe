@@ -46,7 +46,18 @@ public final class Resolve {
             }
         }
         int idx = s.codeIndex(set, ck[1]);
+        if (idx < 0) idx = s.codeIndex(legacyOf(set), ck[1]);
         return idx < 0 ? 0 : s.codeColor(idx);
+    }
+
+    /**
+     * 换版时被替换掉的旧色号单独放进了「旧色卡」套，收藏键里记的还是老套号。
+     * 这里给一个回退：老套号里找不到，就去对应的旧色卡里找。
+     */
+    private static int legacyOf(int set) {
+        if (set == 12) return 47;                 // 立邦 → 立邦 旧色卡
+        if (set >= 14 && set <= 22) return 46;    // 多乐士九套 → 多乐士 旧色卡
+        return -1;
     }
 
     /** color:named:<set>:<名称> 的 id 形如 "0:妃色"。 */
@@ -72,6 +83,10 @@ public final class Resolve {
         }
         int set = parseInt(ck[0], SET_PICKED);
         if (set == SET_PICKED) return "取色";
+        if (s.codeIndex(set, ck[1]) < 0) {
+            int alt = legacyOf(set);              // 旧色号：标签显示成「旧色卡」才不误导
+            if (alt > 0 && s.codeIndex(alt, ck[1]) >= 0) set = alt;
+        }
         DataStore.Meta m = s.meta("pantset", set);
         if (m == null) m = s.meta("ralset", set);
         return m == null ? "" : m.name;

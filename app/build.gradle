@@ -1,0 +1,36 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.wwxiaoqi.guanshe'
+    compileSdk 36
+    compileSdkMinor 1
+    buildToolsVersion '36.1.0'
+
+    defaultConfig {
+        applicationId 'com.wwxiaoqi.guanshe'
+        minSdk 23
+        targetSdk 35
+        versionCode 21
+        versionName '1.6.0'
+    }
+
+    buildTypes {
+        release {
+            // 不内置签名配置：发布时按需配置自己的 keystore
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}

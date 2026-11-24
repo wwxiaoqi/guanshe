@@ -21,6 +21,7 @@ import com.wwxiaoqi.guanshe.ui.CrashScreen;
 import com.wwxiaoqi.guanshe.ui.FavStore;
 import com.wwxiaoqi.guanshe.ui.Haptics;
 import com.wwxiaoqi.guanshe.ui.Motion;
+import com.wwxiaoqi.guanshe.ui.NoteSheet;
 import com.wwxiaoqi.guanshe.ui.Page;
 import com.wwxiaoqi.guanshe.ui.Snack;
 import com.wwxiaoqi.guanshe.ui.PullScrollView;
@@ -52,7 +53,9 @@ public class ColorDetailActivity extends BaseActivity {
 
     private int color;
     private String name;
+    private String zhName;
     private String favKey;
+    private TextView noteView;
     private FavStore favs;
 
     private FrameLayout hero;
@@ -90,12 +93,14 @@ public class ColorDetailActivity extends BaseActivity {
     private void buildUi() {
         color = getIntent().getIntExtra("color", 0);
         name = getIntent().getStringExtra("name");
+        zhName = getIntent().getStringExtra("zhname");
         favKey = getIntent().getStringExtra("favkey");
         if (color == 0) {
             finish();
             return;
         }
         if (name == null) name = "";
+        if (zhName == null) zhName = "";
         favs = new FavStore(this);
         if (favKey != null) favs.touchRecent(favKey);
 
@@ -185,11 +190,18 @@ public class ColorDetailActivity extends BaseActivity {
         title.setLetterSpacing(-0.02f);
         sheet.addView(title);
 
-        TextView hint = Skin.text(this, name.isEmpty() ? "轻点任意一行复制"
-                        : hex + " · 轻点任意一行复制", Skin.T_NOTE, Skin.text2(this));
+        String hintText;
+        if (name.isEmpty()) {
+            hintText = "轻点任意一行复制";
+        } else {
+            // 有中文色名的色卡（多乐士 / 立邦 / 嘉宝莉 / 都芳）把名字放在色值前面
+            hintText = (zhName.isEmpty() ? "" : zhName + " · ") + hex + " · 轻点任意一行复制";
+        }
+        TextView hint = Skin.text(this, hintText, Skin.T_NOTE, Skin.text2(this));
         hint.setLetterSpacing(0.02f);
         hint.setPadding(0, Skin.dp(this, 4), 0, Skin.dp(this, 10));
         sheet.addView(hint);
+
 
         int[] rgb = ColorMath.rgb(color);
         float[] hsl = ColorMath.hsl(color);
@@ -208,6 +220,7 @@ public class ColorDetailActivity extends BaseActivity {
         sheet.addView(infoRows);
 
         buildNamed();
+        addNoteBlock();
         buildCopyButton(hex);
     }
 
@@ -510,10 +523,62 @@ public class ColorDetailActivity extends BaseActivity {
         if (added) {
             Motion.pop(starIcon);
             Haptics.success(v);
-            Snack.show(v, "已收藏这个颜色");
+            Snack.show(v, "已收藏这个颜色", "写备注", new Runnable() {
+                public void run() {
+                    editNote();
+                }
+            }, Snack.DURATION_LONG);
         } else {
             Snack.show(v, "已取消收藏");
         }
+        refreshNote();
+    }
+
+    /** 备注放在「近似传统色」下面：看完颜色和近似色，最后才是自己写的那句话。 */
+    private void addNoteBlock() {
+        noteView = Skin.text(this, "", Skin.T_NOTE, Skin.text2(this));
+        noteView.setLineSpacing(Skin.dp(this, 2), 1f);
+        noteView.setPadding(Skin.dp(this, 10), Skin.dp(this, 8),
+                Skin.dp(this, 10), Skin.dp(this, 8));
+        noteView.setBackground(Skin.round(this, Skin.tint(Skin.warn(this), 0.08f), 10f));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = Skin.dp(this, 14);
+        noteView.setLayoutParams(lp);
+        Tap.row(noteView, 10f);
+        noteView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                editNote();
+            }
+        });
+        sheet.addView(noteView);
+        refreshNote();
+    }
+    /** 有备注才显示；取消收藏后自动隐藏。 */
+    private void refreshNote() {
+        if (noteView == null) return;
+        String n = (favKey == null || favs == null) ? "" : favs.note(favKey);
+        boolean show = n.length() > 0;   // 取消收藏时会清掉备注，这里不必再校验一遍
+        noteView.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) {
+            noteView.setText("备注 · " + n);
+            noteView.setContentDescription("备注：" + n + "，轻点编辑");
+        }
+    }
+
+    private void editNote() {
+        if (favKey == null || favs == null) return;
+        if (!favs.isFav(favKey)) {
+            Snack.show(noteView, "先点右上角星标收藏，再写备注");
+            return;
+        }
+        String subject = (name == null || name.isEmpty()) ? ColorMath.hex(color)
+                : name + " · " + ColorMath.hex(color);
+        NoteSheet.show(this, favs, favKey, "收藏备注", subject, new Runnable() {
+            public void run() {
+                refreshNote();
+            }
+        });
     }
 
     private void onScrolled(int y) {

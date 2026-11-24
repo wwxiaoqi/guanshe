@@ -34,6 +34,7 @@ public final class DataStore {
     // ---- 色号
     private int[] codeColor;
     private String[] codeName;
+    private String[] codeZh;
     private int[] codeSet;
     // ---- 传统色
     private int[] namedColor;
@@ -78,12 +79,14 @@ public final class DataStore {
         List<String> codes = readLines(src, "codes.tsv");
         s.codeColor = new int[codes.size()];
         s.codeName = new String[codes.size()];
+        s.codeZh = new String[codes.size()];
         s.codeSet = new int[codes.size()];
         for (int i = 0; i < codes.size(); i++) {
-            String[] p = split3(codes.get(i), 3);
+            String[] p = split3(codes.get(i), 4);
             s.codeSet[i] = parseInt(p[0]);
             s.codeColor[i] = ColorMath.parse(p[1]);
             s.codeName[i] = p[2];
+            s.codeZh[i] = p[3].trim();      // 老数据没有第 4 列，这里自然为空串
         }
 
         List<String> named = readLines(src, "named.tsv");
@@ -225,6 +228,11 @@ public final class DataStore {
         return codeName[i];
     }
 
+    /** 中文色名（没有就是空串）：多乐士、立邦、嘉宝莉、都芳这几套色卡本身带名字。 */
+    public String codeZh(int i) {
+        return codeZh[i];
+    }
+
     public int codeSet(int i) {
         return codeSet[i];
     }
@@ -346,7 +354,8 @@ public final class DataStore {
 
     public Search search(String raw, int limit) {
         String q = raw == null ? "" : raw.trim();
-        if (q.length() < 2) {
+        // 一个汉字也要能搜：16 个色系名里有一半是单字（红 / 黄 / 绿 / 蓝 / 紫 / 白 / 黑 / 银）
+        if (q.length() < 1) {
             return new Search(new int[0], new int[0], new int[0], true);
         }
         String bare = q.startsWith("#") ? q.substring(1) : q;
@@ -359,7 +368,7 @@ public final class DataStore {
         List<Integer> n = new ArrayList<Integer>();
         String low = q.toLowerCase();
         for (int i = 0; i < codeName.length && c.size() < limit; i++) {
-            if (codeName[i].toLowerCase().contains(low)) c.add(i);
+            if (codeName[i].toLowerCase().contains(low) || codeZh[i].contains(q)) c.add(i);
         }
         for (int i = 0; i < namedName.length && n.size() < limit; i++) {
             if (namedName[i].contains(q) || namedFamily[i].contains(q)

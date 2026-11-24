@@ -15,6 +15,7 @@ import com.wwxiaoqi.guanshe.core.ColorMath;
 import com.wwxiaoqi.guanshe.core.Favorites;
 import com.wwxiaoqi.guanshe.data.DataStore;
 import com.wwxiaoqi.guanshe.data.Resolve;
+import com.wwxiaoqi.guanshe.data.Sources;
 import com.wwxiaoqi.guanshe.ui.BandView;
 import com.wwxiaoqi.guanshe.ui.Page;
 import com.wwxiaoqi.guanshe.ui.Snack;
@@ -26,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 色卡库入口（specs/color-cards · 来源分组）：7 个来源，数字全部从 meta 现算，不写死。
+ * 色卡库入口（specs/color-cards · 来源分组）：品牌顺序由 Sources 决定，数字全部从 meta 现算，不写死。
  *
  * 这一版把"按来源"从一列大行换成 2 列卡片：顶部 56dp 采样色带就是"这套色卡长什么样"，
  * 比一行"11 套 · 13,472 色"更快被认出来。最近查看的清空从"删了就没"改成可撤销。
@@ -50,7 +51,8 @@ public class CardsPage extends BasePage {
         final DataStore s = host.store();
         final LinearLayout root = Page.root(host, Skin.bg(host), true);
 
-        LinearLayout header = Page.header(host, "色卡", "20,969 个色号 · 7 个来源",
+        LinearLayout header = Page.header(host, "色卡", fmt(s.codeCount() + s.namedCount())
+                        + " 个颜色 · " + sourceCount(s) + " 个来源",
                 new int[]{R.drawable.lc_search},
                 new View.OnClickListener[]{new View.OnClickListener() {
                     public void onClick(View v) {
@@ -87,7 +89,7 @@ public class CardsPage extends BasePage {
         LinearLayout foot = Page.wrap(host);
         foot.setPadding(Skin.dp(host, Page.PAD), Skin.dp(host, 18),
                 Skin.dp(host, Page.PAD), Skin.dp(host, 24));
-        TextView note = Skin.text(host, "色号数据在本机 · 潘通与劳尔为商标数据，仅供个人参考。",
+        TextView note = Skin.text(host, "色号数据在本机 · 潘通、劳尔、多乐士、NCS、DIC、TOYO、HKS 等为商标数据，仅供个人参考。",
                 Skin.T_CHIP, Skin.text3(host));
         note.setLineSpacing(Skin.dp(host, 3), 1f);
         foot.addView(note);
@@ -140,66 +142,31 @@ public class CardsPage extends BasePage {
     // ---------------------------------------------------------------- 来源卡
 
     private View sourceGrid(DataStore s) {
-        int pantoneSets = 0, pantoneColors = 0, ralSets = 0, ralColors = 0;
-        int cbcc = 0, niban = 0;
-        int firstPantone = -1, firstRal = -1, cbccSet = -1, nibanSet = -1;
-        int[] namedCount = new int[3];
-        String[] namedName = new String[3];
-        for (DataStore.Meta m : s.metas()) {
-            if ("pantset".equals(m.kind)) {
-                if (m.name.startsWith("CBCC")) {
-                    cbcc += m.count;
-                    if (cbccSet < 0) cbccSet = m.id;
-                } else if (m.name.startsWith("立邦")) {
-                    niban += m.count;
-                    if (nibanSet < 0) nibanSet = m.id;
-                } else {
-                    pantoneSets++;
-                    pantoneColors += m.count;
-                    if (firstPantone < 0) firstPantone = m.id;
-                }
-            } else if ("ralset".equals(m.kind)) {
-                ralSets++;
-                ralColors += m.count;
-                if (firstRal < 0) firstRal = m.id;
-            } else if ("namedset".equals(m.kind) && m.id >= 0 && m.id < 3) {
-                namedCount[m.id] = m.count;
-                namedName[m.id] = m.name;
-            }
+        List<View> cards = new ArrayList<View>();
+
+        // 品牌/体系：顺序与标题都在 Sources 里，这里只负责画卡
+        for (final Sources.Brand b : Sources.BRANDS) {
+            List<DataStore.Meta> sets = Sources.setsOf(s, b);
+            if (sets.isEmpty()) continue;
+            int colors = Sources.colorsOf(s, b);
+            String sub = sets.size() == 1
+                    ? fmt(colors) + " 色"
+                    : sets.size() + " 套 · " + fmt(colors) + " 色";
+            cards.add(sourceCard(b.title, sub, sampleCodes(sets.get(0).id),
+                    new View.OnClickListener() {
+                        public void onClick(View v) {
+                            host.openSourceSetsFrom(b.key, v);
+                        }
+                    }));
         }
 
-        List<View> cards = new ArrayList<View>();
-        cards.add(sourceCard("潘通色卡", pantoneSets + " 套 · " + fmt(pantoneColors) + " 色",
-                sampleCodes(firstPantone), new View.OnClickListener() {
-                    public void onClick(View v) {
-                        host.openSourceSetsFrom("pantone", v);
-                    }
-                }));
-        cards.add(sourceCard("劳尔色卡", ralSets + " 套 · " + fmt(ralColors) + " 色",
-                sampleCodes(firstRal), new View.OnClickListener() {
-                    public void onClick(View v) {
-                        host.openSourceSetsFrom("ral", v);
-                    }
-                }));
-        cards.add(sourceCard("CBCC 中国建筑", fmt(cbcc) + " 色",
-                sampleCodes(cbccSet), new View.OnClickListener() {
-                    public void onClick(View v) {
-                        host.openSourceSetsFrom("cbcc", v);
-                    }
-                }));
-        cards.add(sourceCard("立邦墙面漆", fmt(niban) + " 色",
-                sampleCodes(nibanSet), new View.OnClickListener() {
-                    public void onClick(View v) {
-                        host.openSourceSetsFrom("niban", v);
-                    }
-                }));
-        for (int i = 0; i < 3; i++) {
-            final int set = i;
-            if (namedName[i] == null) continue;
+        // 传统色：每一集各自一张卡，点开直接进网格（没有"套列表"这一层）
+        for (DataStore.Meta m : s.metas()) {
+            if (!"namedset".equals(m.kind)) continue;
+            final int set = m.id;
             int families = s.namedFamilies(set).length;
-            cards.add(sourceCard(namedName[i],
-                    families + " 家族 · " + fmt(namedCount[i]) + " 色", sampleNamed(set),
-                    new View.OnClickListener() {
+            cards.add(sourceCard(m.name, families + " 家族 · " + fmt(m.count) + " 色",
+                    sampleNamed(set), new View.OnClickListener() {
                         public void onClick(View v) {
                             host.openSetFrom("namedset", set, v);
                         }
@@ -370,5 +337,17 @@ public class CardsPage extends BasePage {
     private static String fmt(int n) {
         if (n < 1000) return String.valueOf(n);
         return n / 1000 + "," + String.format("%03d", n % 1000);
+    }
+
+    /** 来源数：品牌来自 Sources，传统色按集数，全部现算。 */
+    private static int sourceCount(DataStore s) {
+        int n = 0;
+        for (Sources.Brand b : Sources.BRANDS) {
+            if (!Sources.setsOf(s, b).isEmpty()) n++;
+        }
+        for (DataStore.Meta m : s.metas()) {
+            if ("namedset".equals(m.kind)) n++;
+        }
+        return n;
     }
 }

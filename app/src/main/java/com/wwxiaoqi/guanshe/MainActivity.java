@@ -53,6 +53,10 @@ public class MainActivity extends BaseActivity {
     public static final int TAB_CARDS = 2;
     public static final int TAB_MINE = 3;
 
+    /** 搜索页点“米色”这类色系时，带着筛选条件回到主界面。 */
+    public static final String EXTRA_FILTER_KIND = "filter_kind";
+    public static final String EXTRA_FILTER_GROUP = "filter_group";
+
     private static final String[] TAB_LABEL = {"发现", "配色", "色卡", "我的"};
     private static final int[] TAB_ICON = {R.drawable.lc_home, R.drawable.lc_palette,
             R.drawable.lc_grid, R.drawable.lc_user};
@@ -160,6 +164,8 @@ public class MainActivity extends BaseActivity {
         onTabSettled(startTab);
         if (startScroll > 0) pages[startTab].restoreScroll(startScroll);
 
+        applyFilterIntent(getIntent());
+
         // 其余三页等首帧画完再建，冷启动不抢时间；滑动前它们也基本就绪
         handler.postDelayed(new Runnable() {
             public void run() {
@@ -169,6 +175,26 @@ public class MainActivity extends BaseActivity {
             }
         }, 120);
     }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        applyFilterIntent(intent);
+    }
+
+    /** 搜索页点"米色"这类色系：带着筛选条件回到主界面，直接落到配色页。 */
+    private void applyFilterIntent(Intent i) {
+        if (i == null) return;
+        int kind = i.getIntExtra(EXTRA_FILTER_KIND, -1);
+        int group = i.getIntExtra(EXTRA_FILTER_GROUP, -1);
+        if (kind >= 0 && group >= 0) {
+            i.removeExtra(EXTRA_FILTER_KIND);
+            i.removeExtra(EXTRA_FILTER_GROUP);
+            filterPalettes(kind, group);
+        }
+    }
+
 
     @Override
     protected void onSaveInstanceState(Bundle out) {

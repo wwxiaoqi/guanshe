@@ -30,6 +30,8 @@ public final class Snack {
 
     private static final long DURATION = 2600L;
     private static final long DURATION_ACTION = 4200L;
+    /** 需要用户动手的提示（比如「写备注」）给足时间。 */
+    public static final long DURATION_LONG = 6000L;
 
     private static View showing;
     private static Runnable dismissShowing;
@@ -46,6 +48,12 @@ public final class Snack {
      * @param action     点击动作后执行，执行前提示条自动消失
      */
     public static void show(View anchor, String text, String actionLabel, final Runnable action) {
+        show(anchor, text, actionLabel, action, 0L);
+    }
+
+    /** @param durationMs 自定义停留时长；<=0 表示按默认（有动作 4.2s / 无动作 2.6s） */
+    public static void show(View anchor, String text, String actionLabel, final Runnable action,
+                            long durationMs) {
         Activity a = activityOf(anchor == null ? null : anchor.getContext());
         if (a == null) return;
         View content = a.findViewById(android.R.id.content);
@@ -61,7 +69,7 @@ public final class Snack {
 
         LinearLayout bar = new LinearLayout(a);
         bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER_HORIZONTAL);
         bar.setBackground(Skin.round(a, bg, 16f));
         int ph = Skin.dp(a, 18), pv = Skin.dp(a, 12);
         bar.setPadding(ph, pv, ph, pv);
@@ -76,7 +84,7 @@ public final class Snack {
 
         if (actionLabel != null && action != null) {
             TextView act = Skin.medium(a, actionLabel, Skin.T_LABEL, actionColor);
-            act.setPadding(Skin.dp(a, 14), 0, Skin.dp(a, 2), 0);
+            act.setPadding(Skin.dp(a, 14), 0, 0, 0);
             act.setContentDescription(actionLabel);
             act.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
@@ -114,10 +122,13 @@ public final class Snack {
         }
 
         showing = v;
-        final long delay = (actionLabel == null || action == null) ? DURATION : DURATION_ACTION;
+        final long delay = durationMs > 0 ? durationMs
+                : ((actionLabel == null || action == null) ? DURATION : DURATION_ACTION);
+        // 定时器必须认人：上一条提示如果所在页面已经销毁，removeCallbacks 摘不掉它，
+        // 到点仍会跑；不比对身份的话它会把刚弹出来的新提示条关掉。
         dismissShowing = new Runnable() {
             public void run() {
-                dismiss();
+                if (showing == v) dismiss();
             }
         };
         v.postDelayed(dismissShowing, delay);

@@ -21,7 +21,9 @@ import com.wwxiaoqi.guanshe.data.DataStore;
 import com.wwxiaoqi.guanshe.data.Resolve;
 import com.wwxiaoqi.guanshe.ui.BandView;
 import com.wwxiaoqi.guanshe.ui.Chips;
+import com.wwxiaoqi.guanshe.ui.Haptics;
 import com.wwxiaoqi.guanshe.ui.Crash;
+import com.wwxiaoqi.guanshe.ui.NoteSheet;
 import com.wwxiaoqi.guanshe.ui.Overlay;
 import com.wwxiaoqi.guanshe.ui.Page;
 import com.wwxiaoqi.guanshe.ui.QrView;
@@ -326,7 +328,29 @@ public class MinePage extends BasePage {
         row.addView(Skin.icon(host, R.drawable.lc_chevron, Skin.text3(host), 18f));
         card.addView(row);
 
-        card.setContentDescription("收藏的配色，" + title + "，轻点查看");
+        // 备注：有就显示，没有给一个"＋ 写备注"的入口（点名称以外的区域仍进详情）
+        final String note = host.favs().note(key);
+        boolean hasNote = note.length() > 0;
+        TextView noteLine = Skin.text(host, hasNote ? "备注 · " + note : "＋ 写备注",
+                Skin.T_CAPTION, hasNote ? Skin.text2(host) : Skin.text3(host));
+        noteLine.setMaxLines(2);
+        noteLine.setEllipsize(TextUtils.TruncateAt.END);
+        noteLine.setPadding(Skin.dp(host, 14), 0, Skin.dp(host, 14), Skin.dp(host, 10));
+        noteLine.setBackground(Skin.round(host,
+                Skin.tint(hasNote ? Skin.warn(host) : Skin.text(host), hasNote ? 0.08f : 0.04f), 8f));
+        Tap.row(noteLine, 8f);
+        noteLine.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                NoteSheet.show(host, host.favs(), key, "收藏备注", label, new Runnable() {
+                    public void run() {
+                        refreshAll();
+                    }
+                });
+            }
+        });
+        card.addView(noteLine);
+
+        card.setContentDescription("收藏的配色，" + title + (hasNote ? "，备注：" + note : "") + "，轻点查看");
         Tap.card(card, Surface.CARD);
         card.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -389,6 +413,7 @@ public class MinePage extends BasePage {
         cell.setPadding(0, Skin.dp(host, 4), 0, Skin.dp(host, 4));
 
         final View swatch = SwatchView.of(host, color, 56, 8);
+        boolean hasNote = host.favs().hasNote(key);
         cell.addView(swatch);
         TextView nameView = Skin.text(host, label, Skin.T_CAPTION, Skin.text3(host));
         nameView.setSingleLine(true);
@@ -400,8 +425,32 @@ public class MinePage extends BasePage {
         nlp.gravity = Gravity.CENTER_HORIZONTAL;
         cell.addView(nameView, nlp);
 
-        cell.setContentDescription(label + " " + ColorMath.hex(color) + "，轻点查看");
+        // 有备注就写在名字下面（格子窄，最多两行，多的省略；点开详情能看全）
+        if (hasNote) {
+            TextView noteText = Skin.text(host, host.favs().note(key), 10, Skin.text3(host));
+            noteText.setMaxLines(2);
+            noteText.setEllipsize(TextUtils.TruncateAt.END);
+            noteText.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams nlp2 = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            nlp2.topMargin = Skin.dp(host, 3);
+            cell.addView(noteText, nlp2);
+        }
+
+        cell.setContentDescription(label + " " + ColorMath.hex(color)
+                + (hasNote ? "，有备注" : "") + "，轻点查看，长按写备注");
         Tap.row(cell, 12f);
+        cell.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) {
+                Haptics.longPress(v);
+                NoteSheet.show(host, host.favs(), key, "收藏备注", label, new Runnable() {
+                    public void run() {
+                        refreshAll();
+                    }
+                });
+                return true;
+            }
+        });
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 host.openColorFrom(color, "", key, swatch);
@@ -499,8 +548,9 @@ public class MinePage extends BasePage {
         aboutBlock.removeAllViews();
         aboutBlock.addView(Page.section(host, "关于", null));
         LinearLayout card = Skin.listCard(host);
-        addAboutRow(card, "配色数据", "13,665 组 · 全部在本机");
-        addAboutRow(card, "色号数据", "20,969 个 · 含传统色 874");
+        addAboutRow(card, "配色数据", Page.fmt(host.store().paletteCount()) + " 组 · 全部在本机");
+        addAboutRow(card, "色号数据", Page.fmt(host.store().codeCount()) + " 个 · 含传统色 "
+                + Page.fmt(host.store().namedCount()));
         addAboutRow(card, "权限", "不申请任何权限");
         addAboutRow(card, "版本", versionName());
         addAboutRow(card, "许可", "MIT");

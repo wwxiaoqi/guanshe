@@ -26,6 +26,7 @@ import com.wwxiaoqi.guanshe.ui.CrashScreen;
 import com.wwxiaoqi.guanshe.ui.FavStore;
 import com.wwxiaoqi.guanshe.ui.Haptics;
 import com.wwxiaoqi.guanshe.ui.Motion;
+import com.wwxiaoqi.guanshe.ui.NoteSheet;
 import com.wwxiaoqi.guanshe.ui.Page;
 import com.wwxiaoqi.guanshe.ui.Snack;
 import com.wwxiaoqi.guanshe.ui.PullScrollView;
@@ -70,6 +71,7 @@ public class PaletteDetailActivity extends BaseActivity {
     private ImageView starIcon;
     private ImageView shareIcon;
     private TextView favPill;
+    private TextView noteView;
     private TextView shareHint;
     private float pullStartY;
     private float pullMax;
@@ -195,6 +197,7 @@ public class PaletteDetailActivity extends BaseActivity {
         hint.setPadding(0, Skin.dp(this, 4), 0, Skin.dp(this, 8));
         sheet.addView(hint);
 
+
         for (int i = 0; i < colors.length; i++) {
             if (i > 0) sheet.addView(Page.hairline(this));
             sheet.addView(colorRow(i));
@@ -230,6 +233,28 @@ public class PaletteDetailActivity extends BaseActivity {
         sheet.addView(actions);
 
         buildSimilar();
+        addNoteBlock();
+    }
+
+    /** 备注放在「相似配色」下面：先看色、再看相近的，最后是自己写的那句话。 */
+    private void addNoteBlock() {
+        noteView = Skin.text(this, "", Skin.T_NOTE, Skin.text2(this));
+        noteView.setLineSpacing(Skin.dp(this, 2), 1f);
+        noteView.setPadding(Skin.dp(this, 10), Skin.dp(this, 8),
+                Skin.dp(this, 10), Skin.dp(this, 8));
+        noteView.setBackground(Skin.round(this, Skin.tint(Skin.warn(this), 0.08f), 10f));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = Skin.dp(this, 16);
+        noteView.setLayoutParams(lp);
+        Tap.row(noteView, 10f);
+        noteView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                editNote();
+            }
+        });
+        sheet.addView(noteView);
+        refreshNote();
     }
 
     private View colorRow(final int i) {
@@ -487,13 +512,45 @@ public class PaletteDetailActivity extends BaseActivity {
         }
         boolean added = favs.toggleFav(favKey);
         paintStar();
+        if (favPill != null) favPill.setText(isFav() ? "取消收藏" : "收藏");
         if (added) {
             Motion.pop(starIcon);
             Haptics.success(v);
-            Snack.show(v, "已收藏这组配色");
+            Snack.show(v, "已收藏这组配色", "写备注", new Runnable() {
+                public void run() {
+                    editNote();
+                }
+            }, Snack.DURATION_LONG);
         } else {
             Snack.show(v, "已取消收藏");
         }
+        refreshNote();
+    }
+
+    /** 有备注才显示；取消收藏后自动隐藏。 */
+    private void refreshNote() {
+        if (noteView == null) return;
+        String n = (favKey == null || favs == null) ? "" : favs.note(favKey);
+        boolean show = n.length() > 0;   // 取消收藏时会清掉备注，这里不必再校验一遍
+        noteView.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) {
+            noteView.setText("备注 · " + n);
+            noteView.setContentDescription("备注：" + n + "，轻点编辑");
+        }
+    }
+
+    private void editNote() {
+        if (favKey == null || favs == null) return;
+        if (!favs.isFav(favKey)) {
+            Snack.show(noteView, "先收藏，再写备注");
+            return;
+        }
+        String subject = (label == null || label.isEmpty()) ? "这组配色" : label;
+        NoteSheet.show(this, favs, favKey, "收藏备注", subject, new Runnable() {
+            public void run() {
+                refreshNote();
+            }
+        });
     }
 
     /** 色带视差 + 到顶后换系统栏图标 / 悬浮按钮配色（只在状态翻转时做，避免每帧设系统栏）。 */

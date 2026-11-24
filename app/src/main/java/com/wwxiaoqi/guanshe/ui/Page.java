@@ -66,6 +66,12 @@ public final class Page {
         return v;
     }
 
+    /** 数字千分位：界面里的计数一律走这里，加数据后口径不会各写各的。 */
+    public static String fmt(int n) {
+        if (n < 1000) return String.valueOf(n);
+        return n / 1000 + "," + String.format("%03d", n % 1000);
+    }
+
     /** 标题区：大标题 + 副标 + 右侧 0/1/2 个图标按钮。 */
     public static LinearLayout header(Context c, String title, String sub,
                                       int[] icons, View.OnClickListener[] listeners) {
